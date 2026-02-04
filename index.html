@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Helper插件 - 交互原型</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    :root {
+      --vscode-bg: #1e1e1e;
+      --vscode-sidebar-bg: #252526;
+      --vscode-panel-bg: #2d2d2d;
+      --vscode-input-bg: #3c3c3c;
+      --vscode-border: #454545;
+      --vscode-text: #cccccc;
+      --vscode-text-secondary: #858585;
+      --vscode-accent: #007acc;
+      --vscode-accent-hover: #1e90ff;
+      --vscode-success: #4ec9b0;
+      --vscode-warning: #dcdcaa;
+      --vscode-error: #f14c4c;
+      --vscode-info: #3794ff;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background-color: #0d1117;
+      color: var(--vscode-text);
+      min-height: 100vh;
+    }
+    
+    /* 顶部导航 */
+    .top-nav {
+      background: var(--vscode-sidebar-bg);
+      border-bottom: 1px solid var(--vscode-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .top-nav h1 {
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #fff;
+    }
+    .nav-tabs {
+      display: flex;
+      gap: 4px;
+    }
+    .nav-tab {
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: var(--vscode-text-secondary);
+      transition: all .2s;
+    }
+    .nav-tab:hover {
+      background: var(--vscode-input-bg);
+      color: var(--vscode-text);
+    }
+    .nav-tab.active {
+      background: var(--vscode-accent);
+      color: #fff;
+    }
+    
+    /* 视图切换 */
+    .view-container { display: none; }
+    .view-container.active { display: block; }
+    
+    /* 交互演示视图 */
+    .demo-view {
+      display: flex;
+      height: calc(100vh - 53px);
+    }
+    .demo-sidebar {
+      width: 300px;
+      background: var(--vscode-sidebar-bg);
+      border-right: 1px solid var(--vscode-border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .demo-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .demo-panel {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      background: var(--vscode-bg);
+    }
+    
+    /* 侧边栏样式 */
+    .sidebar {
+      width: 100%;
+      background: var(--vscode-sidebar-bg);
+    }
+    
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--vscode-border);
+      background: var(--vscode-panel-bg);
+    }
+    
+    .sidebar-header h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    
+    .sidebar-section {
+      border-bottom: 1px solid var(--vscode-border);
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .section-content {
+      padding: 0 16px 16px;
+    }
+    
+    /* 需求卡片 */
+    .requirement-card {
+      background: var(--vscode-panel-bg);
+      border-radius: 8px;
+      padding: 14px;
+      border-left: 3px solid var(--vscode-accent);
+    }
+    
+    .requirement-id {
+      color: var(--vscode-accent);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    
+    .requirement-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    
+    .requirement-meta {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+      color: var(--vscode-text-secondary);
+      margin-bottom: 14px;
+    }
+    
+    .requirement-meta span {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .btn {
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: var(--vscode-accent);
+      color: #fff;
+    }
+    
+    .btn-primary:hover {
+      background: var(--vscode-accent-hover);
+    }
+    
+    .btn-secondary {
+      background: var(--vscode-input-bg);
+      color: var(--vscode-text);
+    }
+    
+    .btn-secondary:hover {
+      background: #4c4c4c;
+    }
+    
+    /* 任务列表 */
+    .task-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .task-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--vscode-panel-bg);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .task-item:hover {
+      background: var(--vscode-input-bg);
+    }
+    
+    .task-item.active, .task-item.selected {
+      border: 2px solid var(--vscode-accent);
+      background: rgba(0, 122, 204, 0.15);
+    }
+    
+    .task-icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+    
+    .task-icon.pending {
+      border: 2px solid var(--vscode-text-secondary);
+      color: transparent;
+    }
+    
+    .task-icon.in-progress {
+      background: var(--vscode-accent);
+      color: #fff;
+    }
+    
+    .task-icon.completed {
+      background: var(--vscode-success);
+      color: #fff;
+    }
+    
+    .task-content {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .task-title {
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .task-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    
+    .task-status.pending {
+      background: var(--vscode-input-bg);
+      color: var(--vscode-text-secondary);
+    }
+    
+    .task-status.in-progress {
+      background: rgba(0, 122, 204, 0.2);
+      color: var(--vscode-info);
+    }
+    
+    .task-status.completed {
+      background: rgba(78, 201, 176, 0.2);
+      color: var(--vscode-success);
+    }
+    
+    /* 快捷操作 */
+    .quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    
+    .quick-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 8px;
+      background: var(--vscode-panel-bg);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    
+    .quick-action-btn:hover {
+      background: var(--vscode-input-bg);
+      border-color: var(--vscode-accent);
+    }
+    
+    .quick-action-btn .icon {
+      font-size: 20px;
+    }
+    
+    .quick-action-btn .label {
+      font-size: 11px;
+      color: var(--vscode-text-secondary);
+    }
+    
+    /* Modal 弹窗 */
+    .modal {
+      background: var(--vscode-sidebar-bg);
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--vscode-border);
+    }
+    
+    .modal-header h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 18px;
+      color: var(--vscode-text-secondary);
+    }
+    
+    .modal-close:hover {
+      background: var(--vscode-input-bg);
+      color: var(--vscode-text);
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .form-group {
+      margin-bottom: 18px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--vscode-input-bg);
+      border: 1px solid var(--vscode-border);
+      border-radius: 4px;
+      color: var(--vscode-text);
+      font-size: 13px;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--vscode-accent);
+    }
+    
+    .form-textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+    
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--vscode-text-secondary);
+      font-size: 12px;
+    }
+    
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--vscode-border);
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 16px 20px;
+      border-top: 1px solid var(--vscode-border);
+    }
+    
+    /* 结构化需求展示 */
+    .structured-content {
+      padding: 20px;
+    }
+    
+    .structured-section {
+      margin-bottom: 20px;
+    }
+    
+    .structured-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--vscode-text);
+      margin-bottom: 10px;
+    }
+    
+    .structured-section-title .emoji {
+      font-size: 16px;
+    }
+    
+    .structured-box {
+      background: var(--vscode-panel-bg);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .structured-list {
+      list-style: none;
+    }
+    
+    .structured-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 4px 0;
+    }
+    
+    .structured-list li::before {
+      content: '•';
+      color: var(--vscode-accent);
+    }
+    
+    .feature-item {
+      background: var(--vscode-panel-bg);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+    
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .feature-number {
+      background: var(--vscode-accent);
+      color: #fff;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    
+    .feature-name {
+      font-weight: 500;
+      font-size: 13px;
+    }
+    
+    .feature-sub {
+      padding-left: 28px;
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+    }
+    
+    .checklist {
+      list-style: none;
+    }
+    
+    .checklist li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 13px;
+    }
+    
+    .checkbox {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--vscode-text-secondary);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .checkbox.checked {
+      background: var(--vscode-success);
+      border-color: var(--vscode-success);
+      color: #fff;
+      font-size: 10px;
+    }
+    
+    /* 代码建议面板 */
+    .code-panel {
+      background: var(--vscode-sidebar-bg);
+    }
+    
+    .code-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--vscode-border);
+    }
+    
+    .code-panel-header h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+    
+    .code-suggestion {
+      border-bottom: 1px solid var(--vscode-border);
+      padding: 16px 20px;
+    }
+    
+    .code-file-path {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+      margin-bottom: 12px;
+    }
+    
+    .code-file-path .icon {
+      color: var(--vscode-warning);
+    }
+    
+    .code-block {
+      background: #1a1a1a;
+      border-radius: 6px;
+      padding: 14px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin-bottom: 12px;
+    }
+    
+    .code-line {
+      white-space: pre;
+    }
+    
+    .code-line.add {
+      color: var(--vscode-success);
+    }
+    
+    .code-line.add::before {
+      content: '+ ';
+    }
+    
+    .code-line.remove {
+      color: var(--vscode-error);
+    }
+    
+    .code-line.remove::before {
+      content: '- ';
+    }
+    
+    .code-line.normal {
+      color: var(--vscode-text-secondary);
+    }
+    
+    .code-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .ai-note {
+      background: rgba(0, 122, 204, 0.1);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.5;
+      border-left: 3px solid var(--vscode-accent);
+      margin-top: 16px;
+    }
+    
+    .ai-note .title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--vscode-accent);
+    }
+    
+    /* 报错分析面板 */
+    .error-panel {
+      padding: 20px;
+    }
+    
+    .error-section {
+      margin-bottom: 20px;
+    }
+    
+    .error-section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .error-box {
+      background: rgba(241, 76, 76, 0.1);
+      border-radius: 6px;
+      padding: 14px;
+      border-left: 3px solid var(--vscode-error);
+      font-family: 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    
+    .error-stack {
+      color: var(--vscode-text-secondary);
+      margin-top: 8px;
+    }
+    
+    .location-info {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: var(--vscode-panel-bg);
+      padding: 12px;
+      border-radius: 6px;
+    }
+    
+    .location-row {
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+    }
+    
+    .location-row .label {
+      color: var(--vscode-text-secondary);
+      min-width: 40px;
+    }
+    
+    .link-btn {
+      color: var(--vscode-accent);
+      cursor: pointer;
+      font-size: 12px;
+      text-decoration: underline;
+      margin-top: 8px;
+      display: inline-block;
+    }
+    
+    .analysis-box {
+      background: var(--vscode-panel-bg);
+      border-radius: 6px;
+      padding: 14px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    
+    .history-ref {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--vscode-border);
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+    }
+    
+    .history-ref strong {
+      color: var(--vscode-text);
+    }
+    
+    .fix-suggestion {
+      background: rgba(78, 201, 176, 0.1);
+      border-radius: 6px;
+      padding: 14px;
+      border-left: 3px solid var(--vscode-success);
+    }
+    
+    /* 任务详情面板 */
+    .task-detail {
+      padding: 20px;
+    }
+    
+    .task-detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--vscode-border);
+    }
+    
+    .task-detail-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    
+    .task-detail-section {
+      margin-bottom: 18px;
+    }
+    
+    .task-detail-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--vscode-text-secondary);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .file-list {
+      list-style: none;
+    }
+    
+    .file-list li,
+    .file-list .file-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-family: 'Fira Code', 'Consolas', monospace;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.15s;
+    }
+    
+    .file-list .file-item:hover {
+      background: var(--vscode-hover);
+    }
+    
+    .file-list .file-item .file-icon {
+      font-size: 14px;
+    }
+    
+    .file-list .file-item .file-name {
+      flex: 1;
+      color: var(--vscode-text);
+    }
+    
+    .file-list .file-item .file-status {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+    }
+    
+    .file-list .file-item .file-status.modified {
+      background: rgba(227, 179, 65, 0.2);
+      color: #e3b341;
+    }
+    
+    .file-list .file-item .file-status.new {
+      background: rgba(63, 185, 80, 0.2);
+      color: #3fb950;
+    }
+    
+    .file-list .file-item .file-status.deleted {
+      background: rgba(248, 81, 73, 0.2);
+      color: #f85149;
+    }
+    
+    .file-list li::before {
+      content: '📄';
+      font-size: 14px;
+    }
+    
+    .file-list .file-item::before {
+      content: none;
+    }
+    
+    .dependency-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--vscode-panel-bg);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    
+    .dependency-tag.completed::before {
+      content: '✓';
+      color: var(--vscode-success);
+    }
+    
+    .spec-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: var(--vscode-panel-bg);
+      border-radius: 4px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+    
+    .spec-status {
+      font-size: 11px;
+      color: var(--vscode-success);
+    }
+    
+    .task-detail-actions {
+      display: flex;
+      gap: 10px;
+      padding-top: 16px;
+      border-top: 1px solid var(--vscode-border);
+    }
+    
+    /* 交互演示专用样式 */
+    .sidebar-header-demo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--vscode-border);
+      background: var(--vscode-panel-bg);
+    }
+    .sidebar-header-demo h3 {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .demo-section {
+      border-bottom: 1px solid var(--vscode-border);
+    }
+    .demo-section-title {
+      padding: 12px 16px;
+      font-size: 11px;
+      color: var(--vscode-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .demo-section-content {
+      padding: 0 12px 12px;
+    }
+    
+    /* 流程提示条 */
+    .flow-hint {
+      background: linear-gradient(135deg, var(--vscode-accent), #005a9e);
+      color: #fff;
+      padding: 12px 24px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .flow-hint .step-indicator {
+      background: rgba(255,255,255,0.2);
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+    
+    /* 面板卡片 */
+    .panel-card {
+      background: var(--vscode-sidebar-bg);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      max-width: 600px;
+    }
+    .panel-card-header {
+      background: var(--vscode-panel-bg);
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--vscode-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .panel-card-header h3 {
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-card-body {
+      padding: 20px;
+    }
+    
+    /* Loading 状态 */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--vscode-border);
+      border-top-color: var(--vscode-accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      color: var(--vscode-text-secondary);
+      font-size: 13px;
+    }
+    
+    /* 空状态 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--vscode-text-secondary);
+    }
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+    .empty-state .title {
+      font-size: 16px;
+      color: var(--vscode-text);
+      margin-bottom: 8px;
+    }
+    .empty-state .desc {
+      font-size: 13px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- 交互演示视图 -->
+  <div id="demo-view" class="view-container active" style="display:block;">
+    <div class="demo-view">
+      <!-- 左侧边栏 -->
+      <div class="demo-sidebar">
+        <div class="sidebar-header-demo">
+          <h3>🤖 AI Helper</h3>
+        </div>
+        
+        <!-- 当前分支 -->
+        <div class="demo-section" style="padding-bottom:0;">
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--vscode-panel-bg);border-radius:6px;font-size:12px;">
+            <span>🔀</span>
+            <span id="current-branch" style="font-family:monospace;color:var(--vscode-accent);">feat/payment-prepay</span>
+            <span style="margin-left:auto;cursor:pointer;color:var(--vscode-text-secondary);" onclick="showBranchSwitch()">切换</span>
+          </div>
+        </div>
+        
+        <!-- 当前需求 -->
+        <div class="demo-section">
+          <div class="demo-section-title">
+            <span>📋 当前需求</span>
+            <span style="cursor:pointer;font-size:12px;color:var(--vscode-text-secondary);" onclick="changeRequirement()">更换</span>
+          </div>
+          <div class="demo-section-content">
+            <!-- 已关联需求状态 -->
+            <div id="requirement-linked" class="requirement-card">
+              <div class="requirement-id">#12345</div>
+              <div class="requirement-title">预约单支持预付功能</div>
+              <div class="requirement-meta">
+                <span>🔵 开发中</span>
+                <span>🔴 P1</span>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn-primary" onclick="showPanel('structured')">查看详情</button>
+                <button class="btn btn-secondary" onclick="showPanel('task-gen')">任务拆分</button>
+              </div>
+            </div>
+            <!-- 未关联需求状态 -->
+            <div id="requirement-unlinked" class="requirement-card" style="display:none;text-align:center;padding:20px 16px;">
+              <div style="font-size:32px;margin-bottom:12px;opacity:0.5;">🔗</div>
+              <div style="color:var(--vscode-text-secondary);margin-bottom:16px;font-size:13px;">当前分支未关联需求</div>
+              <div class="btn-group" style="justify-content:center;">
+                <button class="btn btn-primary" onclick="showTapdSelector()">从 TAPD 选择</button>
+                <button class="btn btn-secondary" onclick="showNewRequirement()">新建需求</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 任务列表 -->
+        <div class="demo-section">
+          <div class="demo-section-title">
+            <span>📝 任务列表</span>
+            <span style="cursor: pointer;" onclick="showPanel('task-gen')">➕</span>
+          </div>
+          <div class="demo-section-content">
+            <div class="task-list" id="task-list">
+              <div class="task-item" onclick="selectTask(1)">
+                <div class="task-icon completed">✓</div>
+                <div class="task-content">
+                  <div class="task-title">T1: 预付弹窗 UI 改造</div>
+                </div>
+                <div class="task-status completed">已完成</div>
+              </div>
+              <div class="task-item" onclick="selectTask(2)">
+                <div class="task-icon in-progress">●</div>
+                <div class="task-content">
+                  <div class="task-title">T2: 微信支付接口对接</div>
+                </div>
+                <div class="task-status in-progress">开发中</div>
+              </div>
+              <div class="task-item" onclick="selectTask(3)">
+                <div class="task-icon pending"></div>
+                <div class="task-content">
+                  <div class="task-title">T3: 埋点统计实现</div>
+                </div>
+                <div class="task-status pending">待开始</div>
+              </div>
+              <div class="task-item" onclick="selectTask(4)">
+                <div class="task-icon pending"></div>
+                <div class="task-content">
+                  <div class="task-title">T4: 异常边界处理</div>
+                </div>
+                <div class="task-status pending">待开始</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 工具箱（独立功能） -->
+        <div class="demo-section">
+          <div class="demo-section-title">
+            <span>🧰 工具箱</span>
+          </div>
+          <div class="demo-section-content">
+            <div class="quick-actions">
+              <div class="quick-action-btn" onclick="showPanel('error')">
+                <span class="icon">🐛</span>
+                <span class="label">分析报错</span>
+              </div>
+              <div class="quick-action-btn" onclick="showPanel('knowledge')">
+                <span class="icon">📖</span>
+                <span class="label">知识库</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 主面板区域 -->
+      <div class="demo-main">
+        <!-- 面板内容 -->
+        <div class="demo-panel" id="demo-panel">
+          <!-- 任务详情面板 -->
+          <div id="panel-task-detail" style="display:none;">
+            <div class="panel-card">
+              <div class="panel-card-header">
+                <h3 id="task-detail-title">📝 任务详情</h3>
+                <div class="task-status in-progress" id="task-detail-status">开发中</div>
+              </div>
+              <div class="panel-card-body task-detail" style="padding:0;">
+                <div class="task-detail-section">
+                  <div class="task-detail-label">📄 任务描述</div>
+                  <div class="structured-box" id="task-detail-desc">对接微信支付 JSAPI，实现预约单预付功能</div>
+                </div>
+                
+                <div class="task-detail-section">
+                  <div class="task-detail-label">📋 需求背景</div>
+                  <div class="structured-box" id="task-detail-background" style="font-size:12px;line-height:1.6;">
+                    来自需求 <a href="#" style="color:var(--vscode-link);">#12345</a>：预约单支持预付功能
+                  </div>
+                </div>
+                
+                <div class="task-detail-section">
+                  <div class="task-detail-label">✅ 验收标准</div>
+                  <ul class="checklist" id="task-detail-checks">
+                    <li><div class="checkbox"></div>调起微信支付成功</li>
+                    <li><div class="checkbox"></div>支付结果回调正确处理</li>
+                    <li><div class="checkbox"></div>支付失败有重试机制</li>
+                  </ul>
+                </div>
+                
+                <div class="task-detail-section" style="background:var(--vscode-panel-bg);border-radius:6px;padding:12px;margin:12px 0;">
+                  <div style="font-size:12px;color:var(--vscode-text-secondary);margin-bottom:8px;">
+                    💡 点击下方按钮，将任务信息传递给 AI 插件进行代码生成或检查
+                  </div>
+                  <div class="task-detail-actions" style="margin-top:0;">
+                    <button class="btn btn-primary" onclick="generateCode()">🚀 调用 AI 生成</button>
+                    <button class="btn btn-secondary" onclick="codeCheck()">🔍 代码检查</button>
+                  </div>
+                </div>
+                
+                <div class="task-detail-actions" style="border-top:1px solid var(--vscode-border);padding-top:12px;">
+                  <button class="btn btn-secondary" onclick="completeTask()">✓ 标记完成</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 代码生成 Loading -->
+          <div id="panel-code-loading" style="display:none;">
+            <div class="panel-card">
+              <div class="panel-card-header">
+                <h3>✨ AI 代码生成</h3>
+              </div>
+              <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">正在收集上下文并生成代码...</div>
+                <div class="loading-text" style="margin-top:8px;font-size:12px;color:var(--vscode-text-secondary);">
+                  📦 任务信息 → 📋 验收标准 → 🤖 调用 AI 插件
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 代码生成结果 -->
+          <div id="panel-code-result" style="display:none;">
+            <div class="panel-card" style="max-width:700px;">
+              <div class="panel-card-header">
+                <h3>🤖 AI 代码建议</h3>
+                <button class="btn btn-primary">应用全部</button>
+              </div>
+              <div class="code-panel" style="background:transparent;">
+                <div class="code-suggestion">
+                  <div class="code-file-path">
+                    <span class="icon">📄</span>
+                    services/payment/wechat.ts
+                  </div>
+                  <div class="code-block">
+                    <div class="code-line add">import { requestPayment } from '@/utils/wx';</div>
+                    <div class="code-line add"></div>
+                    <div class="code-line add">export async function prepayOrder(params: {</div>
+                    <div class="code-line add">  orderId: string;</div>
+                    <div class="code-line add">  amount: number;</div>
+                    <div class="code-line add">}) {</div>
+                    <div class="code-line add">  try {</div>
+                    <div class="code-line add">    const res = await api.createPrepayOrder(params);</div>
+                    <div class="code-line add">    await requestPayment(res.payParams);</div>
+                    <div class="code-line add">    return { success: true };</div>
+                    <div class="code-line add">  } catch (error) {</div>
+                    <div class="code-line add">    handlePaymentError(error);</div>
+                    <div class="code-line add">    return { success: false, error };</div>
+                    <div class="code-line add">  }</div>
+                    <div class="code-line add">}</div>
+                  </div>
+                  <div class="code-actions">
+                    <button class="btn btn-primary">应用此文件</button>
+                    <button class="btn btn-secondary">忽略</button>
+                  </div>
+                </div>
+                
+                <div class="ai-note" style="margin:0 0 0 0;">
+                  <div class="title">💡 AI 说明</div>
+                  基于团队的支付接口规范，已添加 loading 状态管理和统一的错误处理。建议后续增加支付结果的埋点上报。
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 结构化需求面板 -->
+          <div id="panel-structured" style="display:none;">
+            <div class="panel-card" style="max-width:700px;">
+              <div class="panel-card-header">
+                <h3>📊 结构化需求</h3>
+                <span style="color:var(--vscode-text-secondary);font-size:12px;">#12345 预约单支持预付功能</span>
+              </div>
+              <div class="panel-card-body structured-content" style="padding:0;">
+                <div class="structured-section">
+                  <div class="structured-section-title">
+                    <span class="emoji">📌</span> 业务背景
+                  </div>
+                  <div class="structured-box">
+                    当前预约单不支持预付，用户需要行程结束后才能付款，存在逃单风险，需要增加预付能力降低风险。
+                  </div>
+                </div>
+                
+                <div class="structured-section">
+                  <div class="structured-section-title">
+                    <span class="emoji">🎯</span> 业务目标
+                  </div>
+                  <ul class="structured-list">
+                    <li>降低预约单逃单率 30%</li>
+                    <li>提升用户支付体验</li>
+                  </ul>
+                </div>
+                
+                <div class="structured-section">
+                  <div class="structured-section-title">
+                    <span class="emoji">📝</span> 功能点列表
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-header">
+                      <span class="feature-number">1</span>
+                      <span class="feature-name">预付入口展示</span>
+                    </div>
+                    <div class="feature-sub">
+                      • 预约单详情页增加「立即预付」按钮<br>
+                      • 按钮在订单状态为「待出发」时展示
+                    </div>
+                  </div>
+                  <div class="feature-item">
+                    <div class="feature-header">
+                      <span class="feature-number">2</span>
+                      <span class="feature-name">预付弹窗</span>
+                    </div>
+                    <div class="feature-sub">
+                      • 展示预估金额<br>
+                      • 支持微信支付 / 余额支付
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="structured-section">
+                  <div class="structured-section-title">
+                    <span class="emoji">✅</span> 验收标准
+                  </div>
+                  <ul class="checklist">
+                    <li><div class="checkbox"></div>预付流程端到端可用</li>
+                    <li><div class="checkbox"></div>异常场景有兜底</li>
+                    <li><div class="checkbox checked">✓</div>埋点数据正确上报</li>
+                  </ul>
+                </div>
+                
+                <div class="btn-group" style="padding-top:16px;border-top:1px solid var(--vscode-border);">
+                  <button class="btn btn-primary" onclick="showPanel('task-gen')">📝 生成任务拆解</button>
+                  <button class="btn btn-secondary">✏️ 编辑需求</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 分析报错面板 -->
+          <div id="panel-error" style="display:none;">
+            <div class="panel-card" style="max-width:700px;">
+              <div class="panel-card-header">
+                <h3>🐛 分析报错</h3>
+              </div>
+              <div class="panel-card-body" style="padding:16px;">
+                <div style="margin-bottom:12px;">
+                  <div style="font-size:13px;margin-bottom:8px;color:var(--vscode-text-secondary);">粘贴报错信息：</div>
+                  <textarea id="error-input" placeholder="在此粘贴控制台报错、编译错误或异常堆栈信息..." style="width:100%;height:140px;background:var(--vscode-input-bg);border:1px solid var(--vscode-border);padding:12px;border-radius:6px;color:var(--vscode-text);font-size:12px;font-family:monospace;resize:vertical;"></textarea>
+                </div>
+                <div class="btn-group" style="margin-bottom:16px;">
+                  <button class="btn btn-primary" onclick="analyzeError()">🔍 分析报错</button>
+                  <button class="btn btn-secondary" onclick="document.getElementById('error-input').value=''">清空</button>
+                </div>
+                
+                <!-- 分析结果区域 -->
+                <div id="error-result" style="display:none;">
+                  <div style="border-top:1px solid var(--vscode-border);padding-top:16px;">
+                    <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:var(--vscode-accent);">💡 AI 分析结果</div>
+                    <div id="error-analysis" style="background:var(--vscode-panel-bg);padding:14px;border-radius:6px;font-size:13px;line-height:1.6;border-left:3px solid var(--vscode-accent);"></div>
+                    <div class="btn-group" style="margin-top:12px;">
+                      <button class="btn btn-secondary" onclick="copyAnalysis()">📋 复制分析</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 知识库面板 -->
+          <div id="panel-knowledge" style="display:none;">
+            <div class="panel-card" style="max-width:700px;">
+              <div class="panel-card-header">
+                <h3>📖 团队知识库</h3>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" placeholder="搜索..." style="background:var(--vscode-input-bg);border:none;padding:6px 12px;border-radius:4px;color:var(--vscode-text);font-size:12px;width:160px;">
+                </div>
+              </div>
+              <div class="panel-card-body" style="padding:0;">
+                <div class="knowledge-category" style="border-bottom:1px solid var(--vscode-border);">
+                  <div style="padding:12px 16px;background:var(--vscode-panel-bg);font-size:12px;color:var(--vscode-text-secondary);text-transform:uppercase;">📐 编码规范</div>
+                  <div class="knowledge-item" style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--vscode-border);">
+                    <span>📄</span>
+                    <div>
+                      <div style="font-size:13px;margin-bottom:2px;">TypeScript 编码规范</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);">命名约定、类型定义、最佳实践</div>
+                    </div>
+                  </div>
+                  <div class="knowledge-item" style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--vscode-border);">
+                    <span>📄</span>
+                    <div>
+                      <div style="font-size:13px;margin-bottom:2px;">小程序开发规范</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);">页面结构、组件设计、性能优化</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="knowledge-category">
+                  <div style="padding:12px 16px;background:var(--vscode-panel-bg);font-size:12px;color:var(--vscode-text-secondary);text-transform:uppercase;">🧩 组件文档</div>
+                  <div class="knowledge-item" style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--vscode-border);">
+                    <span>📦</span>
+                    <div>
+                      <div style="font-size:13px;margin-bottom:2px;">支付组件使用指南</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);">微信支付、余额支付、支付回调</div>
+                    </div>
+                  </div>
+                  <div class="knowledge-item" style="padding:12px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;">
+                    <span>📦</span>
+                    <div>
+                      <div style="font-size:13px;margin-bottom:2px;">埋点 SDK 接入文档</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);">事件定义、上报时机、调试方法</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 任务拆分结果面板 -->
+          <div id="panel-task-split" style="display:none;">
+            <div class="panel-card">
+              <div class="panel-card-header">
+                <h3>📝 任务拆分结果</h3>
+                <span style="font-size:12px;color:var(--vscode-text-secondary);">AI 生成</span>
+              </div>
+              <div class="panel-card-body" style="padding:0;">
+                <div style="padding:16px;font-size:12px;color:var(--vscode-text-secondary);background:var(--vscode-panel-bg);border-bottom:1px solid var(--vscode-border);">
+                  基于需求「预约单支持预付功能」拆分为以下开发任务：
+                </div>
+                <div class="task-list" style="padding:12px;" id="split-task-list">
+                  <div class="task-item" style="border:1px solid var(--vscode-border);">
+                    <div class="task-icon pending"></div>
+                    <div class="task-content">
+                      <div class="task-title">T1: 预付弹窗 UI 改造</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);margin-top:4px;">修改弹窗布局，增加预付选项</div>
+                    </div>
+                  </div>
+                  <div class="task-item" style="border:1px solid var(--vscode-border);">
+                    <div class="task-icon pending"></div>
+                    <div class="task-content">
+                      <div class="task-title">T2: 微信支付接口对接</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);margin-top:4px;">调用微信支付 JSAPI 完成支付</div>
+                    </div>
+                  </div>
+                  <div class="task-item" style="border:1px solid var(--vscode-border);">
+                    <div class="task-icon pending"></div>
+                    <div class="task-content">
+                      <div class="task-title">T3: 埋点统计实现</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);margin-top:4px;">添加支付流程埋点</div>
+                    </div>
+                  </div>
+                  <div class="task-item" style="border:1px solid var(--vscode-border);">
+                    <div class="task-icon pending"></div>
+                    <div class="task-content">
+                      <div class="task-title">T4: 异常边界处理</div>
+                      <div style="font-size:11px;color:var(--vscode-text-secondary);margin-top:4px;">支付失败、超时等异常处理</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="padding:16px;border-top:1px solid var(--vscode-border);">
+                  <div class="btn-group">
+                    <button class="btn btn-primary" onclick="confirmTaskSplit()">✓ 确认并添加到任务列表</button>
+                    <button class="btn btn-secondary" onclick="showPanel('structured')">返回需求</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 设置面板 -->
+          <div id="panel-settings" style="display:none;">
+            <div class="panel-card" style="max-width:500px;">
+              <div class="panel-card-header">
+                <h3>⚙️ 插件设置</h3>
+              </div>
+              <div class="panel-card-body" style="padding:0;">
+                <div class="settings-section" style="padding:16px;border-bottom:1px solid var(--vscode-border);">
+                  <div style="font-size:13px;font-weight:500;margin-bottom:12px;">🤖 AI 模型</div>
+                  <select style="width:100%;background:var(--vscode-input-bg);border:1px solid var(--vscode-border);padding:8px 12px;border-radius:4px;color:var(--vscode-text);font-size:13px;">
+                    <option>GPT-4 (推荐)</option>
+                    <option>GPT-3.5-turbo</option>
+                    <option>Claude 3</option>
+                  </select>
+                </div>
+                <div class="settings-section" style="padding:16px;border-bottom:1px solid var(--vscode-border);">
+                  <div style="font-size:13px;font-weight:500;margin-bottom:12px;">📊 TAPD 配置</div>
+                  <div style="margin-bottom:10px;">
+                    <label style="font-size:12px;color:var(--vscode-text-secondary);display:block;margin-bottom:4px;">项目 ID</label>
+                    <input type="text" value="12345678" style="width:100%;background:var(--vscode-input-bg);border:1px solid var(--vscode-border);padding:8px 12px;border-radius:4px;color:var(--vscode-text);font-size:13px;">
+                  </div>
+                  <div>
+                    <label style="font-size:12px;color:var(--vscode-text-secondary);display:block;margin-bottom:4px;">Access Token</label>
+                    <input type="password" value="••••••••••" style="width:100%;background:var(--vscode-input-bg);border:1px solid var(--vscode-border);padding:8px 12px;border-radius:4px;color:var(--vscode-text);font-size:13px;">
+                  </div>
+                </div>
+                <div class="settings-section" style="padding:16px;">
+                  <div style="font-size:13px;font-weight:500;margin-bottom:12px;">🔔 通知设置</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <span style="font-size:13px;">代码生成完成通知</span>
+                    <div style="width:40px;height:22px;background:var(--vscode-accent);border-radius:11px;position:relative;cursor:pointer;">
+                      <div style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;right:2px;top:2px;"></div>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-size:13px;">报错检测通知</span>
+                    <div style="width:40px;height:22px;background:var(--vscode-accent);border-radius:11px;position:relative;cursor:pointer;">
+                      <div style="width:18px;height:18px;background:#fff;border-radius:50%;position:absolute;right:2px;top:2px;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 当前选中的任务
+    let selectedTaskId = null;
+    
+    // 任务数据
+    const tasks = {
+      1: {
+        title: 'T1: 预付弹窗 UI 改造',
+        status: 'completed',
+        statusText: '已完成',
+        desc: '实现预付弹窗的 UI 组件，包括金额展示、支付方式选择、按钮交互',
+        checks: ['弹窗样式符合设计稿', '支付方式切换正常', '金额展示正确']
+      },
+      2: {
+        title: 'T2: 微信支付接口对接',
+        status: 'in-progress',
+        statusText: '开发中',
+        desc: '对接微信支付 JSAPI，实现预约单预付功能',
+        checks: ['调起微信支付成功', '支付结果回调正确处理', '支付失败有重试机制']
+      },
+      3: {
+        title: 'T3: 埋点统计实现',
+        status: 'pending',
+        statusText: '待开始',
+        desc: '实现预付流程的埋点上报，包括曝光、点击、结果等关键节点',
+        checks: ['埋点参数正确', '上报时机正确', '数据可在平台查看']
+      },
+      4: {
+        title: 'T4: 异常边界处理',
+        status: 'pending',
+        statusText: '待开始',
+        desc: '处理各种异常场景：网络错误、支付超时、金额变化等',
+        checks: ['网络错误有提示', '支付超时可重试', '金额变化有弹窗确认']
+      }
+    };
+    
+    // 选中任务
+    function selectTask(id) {
+      selectedTaskId = id;
+      
+      // 更新任务列表高亮
+      document.querySelectorAll('#task-list .task-item').forEach((item, index) => {
+        item.classList.toggle('selected', index + 1 === id);
+      });
+      
+      // 显示任务详情
+      const task = tasks[id];
+      document.getElementById('task-detail-title').textContent = '📝 ' + task.title;
+      document.getElementById('task-detail-status').textContent = task.statusText;
+      document.getElementById('task-detail-status').className = 'task-status ' + task.status;
+      document.getElementById('task-detail-desc').textContent = task.desc;
+      document.getElementById('task-detail-checks').innerHTML = task.checks.map(c => '<li><div class="checkbox"></div>' + c + '</li>').join('');
+      
+      // 更新流程提示
+      updateFlowHint(1, '已选择任务「' + task.title + '」，点击「调用 AI 生成」开始开发');
+      
+      showPanel('task-detail');
+    }
+    
+    // 显示面板
+    function showPanel(panel) {
+      document.getElementById('panel-task-detail').style.display = 'none';
+      document.getElementById('panel-code-loading').style.display = 'none';
+      document.getElementById('panel-code-result').style.display = 'none';
+      document.getElementById('panel-structured').style.display = 'none';
+      document.getElementById('panel-error').style.display = 'none';
+      document.getElementById('panel-knowledge').style.display = 'none';
+      document.getElementById('panel-settings').style.display = 'none';
+      document.getElementById('panel-task-split').style.display = 'none';
+      
+      if (panel === 'task-detail') {
+        document.getElementById('panel-task-detail').style.display = 'block';
+      } else if (panel === 'code-loading') {
+        document.getElementById('panel-code-loading').style.display = 'block';
+      } else if (panel === 'code-result') {
+        document.getElementById('panel-code-result').style.display = 'block';
+      } else if (panel === 'structured') {
+        document.getElementById('panel-structured').style.display = 'block';
+        updateFlowHint(0, '查看结构化需求，点击「生成任务拆解」可自动生成开发任务');
+      } else if (panel === 'task-gen') {
+        // 模拟任务拆分生成
+        document.getElementById('panel-code-loading').querySelector('.loading-text').textContent = '正在分析需求并生成任务拆解...';
+        document.getElementById('panel-code-loading').style.display = 'block';
+        updateFlowHint(0, 'AI 正在分析需求，生成任务拆解...');
+        setTimeout(function() {
+          document.getElementById('panel-code-loading').style.display = 'none';
+          document.getElementById('panel-task-split').style.display = 'block';
+          updateFlowHint(0, '任务拆分完成，确认后将添加到任务列表');
+        }, 1500);
+      } else if (panel === 'task-split') {
+        document.getElementById('panel-task-split').style.display = 'block';
+        updateFlowHint(0, '任务拆分完成，确认后将添加到任务列表');
+      } else if (panel === 'error') {
+        document.getElementById('panel-error').style.display = 'block';
+        updateFlowHint(0, '分析当前文件或控制台的报错，获取修复建议');
+      } else if (panel === 'knowledge') {
+        document.getElementById('panel-knowledge').style.display = 'block';
+        updateFlowHint(0, '查阅团队知识库，包括编码规范、组件文档等');
+      } else if (panel === 'settings') {
+        document.getElementById('panel-settings').style.display = 'block';
+        updateFlowHint(0, '配置 AI Helper 插件选项');
+      }
+    }
+    
+    // 分支-需求映射缓存
+    const branchRequirementMap = {
+      'feat/payment-prepay': { id: '#12345', title: '预约单支持预付功能', status: '开发中', priority: 'P1' },
+      'feat/order-refund': { id: '#12346', title: '订单退款流程优化', status: '待开发', priority: 'P2' },
+      'fix/login-bug': null,  // 未关联需求
+      'main': null
+    };
+    
+    // 显示分支切换弹窗
+    function showBranchSwitch() {
+      const branches = Object.keys(branchRequirementMap);
+      const currentBranch = document.getElementById('current-branch').textContent;
+      
+      let options = branches.map(b => {
+        const req = branchRequirementMap[b];
+        const linked = req ? `→ ${req.id} ${req.title}` : '(未关联)';
+        const selected = b === currentBranch ? ' ✓' : '';
+        return `${b} ${linked}${selected}`;
+      }).join('\n');
+      
+      const selected = prompt(`选择分支切换（演示）：\n\n${options}\n\n输入分支名：`, 'fix/login-bug');
+      if (selected && branchRequirementMap.hasOwnProperty(selected)) {
+        switchBranch(selected);
+      }
+    }
+    
+    // 切换分支
+    function switchBranch(branchName) {
+      document.getElementById('current-branch').textContent = branchName;
+      const requirement = branchRequirementMap[branchName];
+      const taskSection = document.querySelector('.demo-sidebar .demo-section:nth-child(4)'); // 任务列表区域
+      
+      if (requirement) {
+        // 有关联需求，显示需求卡片和任务列表
+        document.getElementById('requirement-linked').style.display = 'block';
+        document.getElementById('requirement-unlinked').style.display = 'none';
+        document.getElementById('requirement-linked').querySelector('.requirement-id').textContent = requirement.id;
+        document.getElementById('requirement-linked').querySelector('.requirement-title').textContent = requirement.title;
+        if (taskSection) taskSection.style.display = 'block';
+        updateFlowHint(0, `已切换到分支 ${branchName}，自动加载关联需求 ${requirement.id}`);
+      } else {
+        // 无关联需求，显示未关联状态，隐藏任务列表
+        document.getElementById('requirement-linked').style.display = 'none';
+        document.getElementById('requirement-unlinked').style.display = 'block';
+        if (taskSection) taskSection.style.display = 'none';
+        updateFlowHint(0, `分支 ${branchName} 尚未关联需求，请选择或新建`);
+      }
+    }
+    
+    // 更换需求
+    function changeRequirement() {
+      if (confirm('确定要更换当前需求吗？\n\n更换后任务列表会清空。')) {
+        document.getElementById('requirement-linked').style.display = 'none';
+        document.getElementById('requirement-unlinked').style.display = 'block';
+        const taskSection = document.querySelector('.demo-sidebar .demo-section:nth-child(4)');
+        if (taskSection) taskSection.style.display = 'none';
+        updateFlowHint(0, '请从 TAPD 选择需求或新建需求');
+      }
+    }
+    
+    // 显示 TAPD 选择器
+    function showTapdSelector() {
+      const tapdList = [
+        '#12345 预约单支持预付功能',
+        '#12346 订单退款流程优化',
+        '#12347 司机端消息推送',
+        '#12348 乘客评价系统改版'
+      ];
+      
+      const selected = prompt(`从 TAPD 选择需求：\n\n${tapdList.join('\n')}\n\n输入需求编号（如 12345）：`);
+      if (selected) {
+        linkRequirement('#' + selected, '预约单支持预付功能');
+      }
+    }
+    
+    // 新建需求
+    function showNewRequirement() {
+      const title = prompt('输入需求标题：');
+      if (title) {
+        const newId = '#' + Math.floor(10000 + Math.random() * 90000);
+        linkRequirement(newId, title);
+        updateFlowHint(0, `已创建新需求 ${newId}，可继续完善需求详情`);
+      }
+    }
+    
+    // 关联需求到当前分支
+    function linkRequirement(id, title) {
+      const branchName = document.getElementById('current-branch').textContent;
+      branchRequirementMap[branchName] = { id, title, status: '开发中', priority: 'P1' };
+      
+      document.getElementById('requirement-linked').style.display = 'block';
+      document.getElementById('requirement-unlinked').style.display = 'none';
+      document.getElementById('requirement-linked').querySelector('.requirement-id').textContent = id;
+      document.getElementById('requirement-linked').querySelector('.requirement-title').textContent = title;
+      
+      // 显示任务列表区域
+      const taskSection = document.querySelector('.demo-sidebar .demo-section:nth-child(4)');
+      if (taskSection) taskSection.style.display = 'block';
+      
+      updateFlowHint(0, `已关联需求 ${id} 到分支 ${branchName}`);
+    }
+    
+    // 分析报错
+    function analyzeError() {
+      const errorInput = document.getElementById('error-input').value.trim();
+      if (!errorInput) {
+        alert('请先粘贴报错信息');
+        return;
+      }
+      
+      // 模拟 AI 分析
+      const analysisResult = document.getElementById('error-result');
+      const analysisContent = document.getElementById('error-analysis');
+      
+      // 显示加载状态
+      analysisContent.innerHTML = '<span style="color:var(--vscode-text-secondary);">🔄 正在分析...</span>';
+      analysisResult.style.display = 'block';
+      
+      // 模拟延迟后显示结果
+      setTimeout(() => {
+        analysisContent.innerHTML = `
+          <div style="margin-bottom:10px;"><strong>问题类型：</strong>运行时类型错误</div>
+          <div style="margin-bottom:10px;"><strong>根因分析：</strong>尝试访问 undefined 或 null 对象的属性。通常是因为异步数据未返回时就访问了其属性，或者函数参数未正确传递。</div>
+          <div style="margin-bottom:10px;"><strong>建议修复：</strong></div>
+          <ol style="margin:0;padding-left:20px;line-height:1.8;">
+            <li>在访问属性前添加空值检查：<code style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:3px;">params?.amount</code></li>
+            <li>函数入口添加参数校验</li>
+            <li>检查调用方是否正确传参</li>
+          </ol>
+        `;
+      }, 1000);
+    }
+    
+    // 复制分析结果
+    function copyAnalysis() {
+      const analysisContent = document.getElementById('error-analysis').innerText;
+      navigator.clipboard.writeText(analysisContent).then(() => {
+        alert('已复制到剪贴板');
+      });
+    }
+    
+    // 生成代码 - 调用外部 AI 插件
+    function generateCode() {
+      if (!selectedTaskId) {
+        alert('请先选择一个任务');
+        return;
+      }
+      
+      const task = tasks[selectedTaskId];
+      const aiPlugin = document.getElementById('ai-plugin-selector').value;
+      const pluginNames = { codebuddy: 'CodeBuddy', copilot: 'GitHub Copilot', codeium: 'Codeium' };
+      
+      // 显示上下文准备过程
+      updateFlowHint(2, '正在准备上下文...');
+      showPanel('code-loading');
+      document.getElementById('panel-code-loading').querySelector('.loading-text').textContent = '正在收集上下文...';
+      
+      setTimeout(() => {
+        // 生成上下文 prompt
+        const contextPrompt = generateContextPrompt(task);
+        
+        // 显示结果面板（改为展示 prompt 预览）
+        updateFlowHint(3, `上下文已准备完成，即将调用 ${pluginNames[aiPlugin]} 生成代码`);
+        showContextPreview(contextPrompt, aiPlugin);
+      }, 1200);
+    }
+    
+    // 生成上下文 Prompt
+    function generateContextPrompt(task) {
+      return '## 任务\n' + task.title + '\n\n## 需求背景\n需求 #12345：预约单支持预付功能\n- 用户可在预约单详情页选择预付\n- 调用微信支付接口完成支付\n- 支付成功后更新订单状态\n\n## 验收标准\n' + task.checks.map(c => '- ' + c).join('\n') + '\n\n## 请帮我：\n1. 分析需要修改哪些文件\n2. 生成实现代码\n3. 确保符合团队规范';
+    }
+    
+    // 显示上下文预览
+    function showContextPreview(prompt, aiPlugin) {
+      const pluginNames = { codebuddy: 'CodeBuddy', copilot: 'GitHub Copilot', codeium: 'Codeium' };
+      const resultPanel = document.getElementById('panel-code-result');
+      const loadingPanel = document.getElementById('panel-code-loading');
+      
+      // 更新结果面板内容
+      resultPanel.innerHTML = '<div class="panel-card">' +
+        '<div class="panel-card-header"><h3>📋 上下文已准备</h3></div>' +
+        '<div class="panel-card-body">' +
+          '<div style="margin-bottom:16px;">' +
+            '<div style="font-size:13px;margin-bottom:8px;color:var(--vscode-text-secondary);">以下上下文将传递给 ' + pluginNames[aiPlugin] + '：</div>' +
+            '<div class="code-block" style="max-height:280px;overflow-y:auto;font-size:12px;white-space:pre-wrap;">' + prompt + '</div>' +
+          '</div>' +
+          '<div class="btn-group">' +
+            '<button class="btn btn-primary" onclick="invokeAIPlugin(\'' + aiPlugin + '\')">🚀 调用 ' + pluginNames[aiPlugin] + '</button>' +
+            '<button class="btn btn-secondary" onclick="copyPrompt()">📋 复制 Prompt</button>' +
+            '<button class="btn btn-secondary" onclick="showPanel(\'task-detail\')">返回</button>' +
+          '</div>' +
+          '<div style="margin-top:12px;padding:12px;background:var(--vscode-panel-bg);border-radius:6px;font-size:12px;color:var(--vscode-text-secondary);">' +
+            '💡 点击「调用」后，将打开目标文件并自动填充注释上下文，然后唤起 ' + pluginNames[aiPlugin] + ' 进行代码生成' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+      
+      loadingPanel.style.display = 'none';
+      resultPanel.style.display = 'block';
+    }
+    
+    // 调用 AI 插件
+    function invokeAIPlugin(plugin) {
+      const pluginNames = { codebuddy: 'CodeBuddy', copilot: 'GitHub Copilot', codeium: 'Codeium' };
+      
+      // 模拟调用过程
+      updateFlowHint(0, '正在打开文件并调用 ' + pluginNames[plugin] + '...');
+      
+      setTimeout(() => {
+        alert('[演示] 将执行以下操作：\n\n1. 打开文件：pages/order-detail/prepay-modal/index.ts\n2. 在文件顶部插入上下文注释\n3. 执行命令：' + plugin + '.generateCode\n4. ' + pluginNames[plugin] + ' 开始生成代码\n\n实际使用时会直接在 IDE 中完成这些操作。');
+        
+        updateFlowHint(0, '已调用 ' + pluginNames[plugin] + '，请在编辑器中继续交互');
+      }, 500);
+    }
+    
+    // 复制 Prompt
+    function copyPrompt() {
+      const codeBlock = document.querySelector('#panel-code-result .code-block');
+      if (codeBlock) {
+        navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+          alert('Prompt 已复制到剪贴板');
+        });
+      }
+    }
+    
+    // 代码检查 - 调用外部工具
+    function codeCheck() {
+      if (!selectedTaskId) {
+        alert('请先选择一个任务');
+        return;
+      }
+      
+      const task = tasks[selectedTaskId];
+      const aiPlugin = document.getElementById('ai-plugin-selector').value;
+      const pluginNames = { codebuddy: 'CodeBuddy', copilot: 'GitHub Copilot', codeium: 'Codeium' };
+      
+      // 检查工具选项
+      const checkTools = [
+        { id: 'eslint', name: 'ESLint', desc: '代码规范检查' },
+        { id: 'ai-review', name: pluginNames[aiPlugin] + ' Review', desc: 'AI 代码审查' },
+        { id: 'sonar', name: 'SonarQube', desc: '代码质量扫描' }
+      ];
+      
+      // 显示检查选项
+      const resultPanel = document.getElementById('panel-code-result');
+      const loadingPanel = document.getElementById('panel-code-loading');
+      
+      resultPanel.innerHTML = '<div class="panel-card">' +
+        '<div class="panel-card-header"><h3>🔍 选择检查工具</h3></div>' +
+        '<div class="panel-card-body">' +
+          '<div style="margin-bottom:16px;font-size:13px;color:var(--vscode-text-secondary);">选择要调用的代码检查工具：</div>' +
+          '<div style="display:flex;flex-direction:column;gap:8px;">' +
+            checkTools.map(function(tool) {
+              return '<div style="padding:12px;background:var(--vscode-panel-bg);border-radius:6px;cursor:pointer;border:1px solid var(--vscode-border);" onclick="runCodeCheck(\'' + tool.id + '\')" onmouseover="this.style.borderColor=\'var(--vscode-focus)\';" onmouseout="this.style.borderColor=\'var(--vscode-border)\';">' +
+                '<div style="font-weight:500;margin-bottom:4px;">' + tool.name + '</div>' +
+                '<div style="font-size:12px;color:var(--vscode-text-secondary);">' + tool.desc + '</div>' +
+              '</div>';
+            }).join('') +
+          '</div>' +
+          '<div style="margin-top:16px;">' +
+            '<button class="btn btn-secondary" onclick="showPanel(\'task-detail\')">返回</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+      
+      loadingPanel.style.display = 'none';
+      resultPanel.style.display = 'block';
+    }
+    
+    // 执行代码检查
+    function runCodeCheck(toolId) {
+      const task = tasks[selectedTaskId];
+      const aiPlugin = document.getElementById('ai-plugin-selector').value;
+      const pluginNames = { codebuddy: 'CodeBuddy', copilot: 'GitHub Copilot', codeium: 'Codeium' };
+      
+      const toolInfo = {
+        'eslint': { name: 'ESLint', command: 'eslint.executeAutofix' },
+        'ai-review': { name: pluginNames[aiPlugin] + ' Review', command: aiPlugin + '.review' },
+        'sonar': { name: 'SonarQube', command: 'sonarlint.analyzeCurrentFile' }
+      };
+      
+      const tool = toolInfo[toolId];
+      
+      alert('[演示] 将执行以下操作：\n\n1. 执行命令：' + tool.command + '\n\n2. ' + tool.name + ' 将分析当前打开的文件\n\n实际使用时会直接在 IDE 中完成这些操作。');
+      
+      showPanel('task-detail');
+    }
+    
+    // 确认任务拆分
+    function confirmTaskSplit() {
+      alert('任务已添加到任务列表！');
+      updateFlowHint(1, '任务拆分完成，点击任务列表中的任务开始开发');
+      showPanel('task-detail');
+      selectTask(2);
+    }
+    
+    // 标记完成
+    function completeTask() {
+      if (!selectedTaskId) return;
+      
+      const taskItem = document.querySelectorAll('#task-list .task-item')[selectedTaskId - 1];
+      if (taskItem) {
+        taskItem.querySelector('.task-icon').className = 'task-icon completed';
+        taskItem.querySelector('.task-icon').textContent = '✓';
+        taskItem.querySelector('.task-status').className = 'task-status completed';
+        taskItem.querySelector('.task-status').textContent = '已完成';
+      }
+      
+      tasks[selectedTaskId].status = 'completed';
+      tasks[selectedTaskId].statusText = '已完成';
+      
+      document.getElementById('task-detail-status').textContent = '已完成';
+      document.getElementById('task-detail-status').className = 'task-status completed';
+      
+    }
+    
+    // 更新流程提示
+    function updateFlowHint(step, text) {
+      const stepText = step > 0 ? '步骤 ' + step + '/3' : '提示';
+    }
+  </script>
+  
+</body>
+</html>
