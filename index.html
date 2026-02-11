@@ -736,46 +736,6 @@
       margin-top: 4px;
     }
     
-    /* 代码块 */
-    .code-block {
-      background: #1a1a1a;
-      border-radius: 6px;
-      padding: 12px;
-      font-family: 'Fira Code', 'Consolas', monospace;
-      font-size: 11px;
-      line-height: 1.6;
-      overflow-x: auto;
-    }
-    
-    .code-line {
-      white-space: pre;
-    }
-    
-    .code-line.add {
-      color: var(--vscode-success);
-    }
-    
-    .code-line.add::before {
-      content: '+ ';
-    }
-    
-    /* AI 说明 */
-    .ai-note {
-      background: rgba(0, 122, 204, 0.1);
-      border-radius: 6px;
-      padding: 10px;
-      font-size: 11px;
-      line-height: 1.5;
-      border-left: 3px solid var(--vscode-accent);
-      margin-top: 12px;
-    }
-    
-    .ai-note .title {
-      font-weight: 500;
-      margin-bottom: 4px;
-      color: var(--vscode-accent);
-    }
-    
     /* 空状态 */
     .empty-state {
       text-align: center;
@@ -992,26 +952,6 @@
       color: var(--vscode-text-secondary);
       font-size: 10px;
     }
-
-    /* 代码生成结果 */
-    .code-result-section {
-      margin-bottom: 14px;
-    }
-
-    .code-result-file {
-      font-size: 11px;
-      color: var(--vscode-text-secondary);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-
-    .code-result-actions {
-      display: flex;
-      gap: 8px;
-      margin-top: 8px;
-    }
   </style>
 </head>
 <body>
@@ -1155,49 +1095,6 @@
             <div class="task-list" id="task-list">
               <!-- 任务项通过 JS 渲染 -->
             </div>
-          </div>
-        </div>
-        
-        <!-- 代码生成结果面板 -->
-        <div id="code-result-panel" style="display: none;">
-          <div class="section">
-            <div class="section-header">
-              <div class="section-title">🤖 AI 代码建议</div>
-              <button class="section-action" onclick="hideCodeResult()">返回</button>
-            </div>
-          </div>
-          
-          <div class="code-result-section">
-            <div class="code-result-file">
-              <span>📄</span>
-              services/payment/wechat.ts
-            </div>
-            <div class="code-block">
-              <div class="code-line add">import { requestPayment } from '@/utils/wx';</div>
-              <div class="code-line add"></div>
-              <div class="code-line add">export async function prepayOrder(params: {</div>
-              <div class="code-line add">  orderId: string;</div>
-              <div class="code-line add">  amount: number;</div>
-              <div class="code-line add">}) {</div>
-              <div class="code-line add">  try {</div>
-              <div class="code-line add">    const res = await api.createPrepayOrder(params);</div>
-              <div class="code-line add">    await requestPayment(res.payParams);</div>
-              <div class="code-line add">    return { success: true };</div>
-              <div class="code-line add">  } catch (error) {</div>
-              <div class="code-line add">    handlePaymentError(error);</div>
-              <div class="code-line add">    return { success: false, error };</div>
-              <div class="code-line add">  }</div>
-              <div class="code-line add">}</div>
-            </div>
-            <div class="code-result-actions">
-              <button class="btn btn-primary btn-sm">应用此文件</button>
-              <button class="btn btn-secondary btn-sm">忽略</button>
-            </div>
-          </div>
-          
-          <div class="ai-note">
-            <div class="title">💡 AI 说明</div>
-            基于团队的支付接口规范，已添加 loading 状态管理和统一的错误处理。建议后续增加支付结果的埋点上报。
           </div>
         </div>
       </div>
@@ -1655,7 +1552,7 @@
           </div>
           
           <div class="btn-group" style="margin-top: 12px;">
-            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); generateCodeForTask(${id})">🚀 AI 生成</button>
+            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); generateCodeForTask(${id})">🚀 调用 CodeBuddy</button>
             <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); codeReviewForTask(${id})">🔍 代码检查</button>
             <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); markComplete(${id})">✓ 完成</button>
           </div>
@@ -1746,22 +1643,13 @@
     // 为特定任务生成代码
     function generateCodeForTask(taskId) {
       const task = tasks[taskId];
-      
-      // 显示代码结果面板
-      document.getElementById('requirement-bound').style.display = 'none';
-      document.getElementById('code-result-panel').style.display = 'block';
+      alert('[演示] 正在调用 CodeBuddy...\n\n任务：' + task.title + '\n关联文件：' + (task.files.length > 0 ? task.files.join(', ') : '无') + '\n\nCodeBuddy 将在编辑器中展示代码建议');
     }
 
     // 为特定任务进行代码检查
     function codeReviewForTask(taskId) {
       const task = tasks[taskId];
-      alert('[演示] 正在对任务「' + task.title + '」进行代码检查...\n\n将调用 AI 插件分析关联文件');
-    }
-    
-    // 隐藏代码结果
-    function hideCodeResult() {
-      document.getElementById('code-result-panel').style.display = 'none';
-      document.getElementById('requirement-bound').style.display = 'block';
+      alert('[演示] 正在调用 CodeBuddy 进行代码检查...\n\n任务：' + task.title + '\n关联文件将作为上下文发送给 CodeBuddy');
     }
     
     // 标记任务完成
